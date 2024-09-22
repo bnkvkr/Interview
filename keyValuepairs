@@ -1,0 +1,115 @@
+#include <iostream>
+#include <unordered_map>
+#include <deque>
+#include <chrono>
+
+using namespace std;
+
+class TimeBasedKVStore {
+private:
+    int window; // Time window in seconds
+    unordered_map<string, pair<int, long long>> kvStore; // Stores key and its value with the timestamp
+    deque<pair<string, long long>> expiryQueue; // Stores keys in order of insertion for expiry checks
+    double sumOfValues; // Sum of valid key values
+    int countOfValidKeys; // Number of valid keys
+
+    // Gets the current time in seconds
+    long long getCurrentTime() {
+        return chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    // Removes all expired entries based on the current time
+    void removeExpired(long long currentTime) {
+        while (!expiryQueue.empty()) {
+            auto oldestEntry = expiryQueue.front();
+            if (currentTime - oldestEntry.second > window) {
+                // The key has expired, remove it from both the map and the deque
+                auto key = oldestEntry.first;
+                sumOfValues -= kvStore[key].first;
+                countOfValidKeys--;
+                kvStore.erase(key);
+                expiryQueue.pop_front();
+            } else {
+                // No more keys are expired
+                break;
+            }
+        }
+    }
+
+public:
+    // Constructor to initialize the window size
+    TimeBasedKVStore(int window) {
+        this->window = window;
+        sumOfValues = 0;
+        countOfValidKeys = 0;
+    }
+
+    // Puts a key-value pair with the current timestamp
+    void put(string key, int value) {
+        long long currentTime = getCurrentTime();
+        
+        // Remove expired keys first
+        removeExpired(currentTime);
+
+        if (kvStore.find(key) != kvStore.end()) {
+            // If key already exists, update the sum and value
+            sumOfValues -= kvStore[key].first; // Subtract the old value
+        } else {
+            countOfValidKeys++;
+        }
+
+        // Insert the new key-value pair
+        kvStore[key] = {value, currentTime};
+        expiryQueue.push_back({key, currentTime});
+        sumOfValues += value; // Add the new value
+    }
+
+    // Retrieves the value of a key if it's within the valid time window
+    int get(string key) {
+        long long currentTime = getCurrentTime();
+
+        // Remove expired keys first
+        removeExpired(currentTime);
+
+        if (kvStore.find(key) == kvStore.end()) {
+            return -1;
+        }
+
+        long long insertionTime = kvStore[key].second;
+        if (currentTime - insertionTime <= window) {
+            return kvStore[key].first;
+        } else {
+            return -1;
+        }
+    }
+
+    // Returns the average of valid key values within the time window
+    double getAverage() {
+        long long currentTime = getCurrentTime();
+
+        // Remove expired keys first
+        removeExpired(currentTime);
+
+        if (countOfValidKeys == 0) {
+            return 0.0;
+        }
+
+        return sumOfValues / countOfValidKeys;
+    }
+};
+
+int main() {
+    TimeBasedKVStore store(5); // Initialize with a 5 second window
+    
+    store.put("foo", 1);
+   
+    store.put("bar", 2);
+   
+    cout << "get(foo): " << store.get("foo") << endl; // Output: 1
+    cout << "getAverage: " << store.getAverage() << endl; // Output: 1.5
+  
+    cout << "get(foo): " << store.get("foo") << endl; // Output: -1 (expired)
+    cout << "getAverage: " << store.getAverage() << endl; // Output: 2 (only bar is valid)
+    
+    return 0;
+}
