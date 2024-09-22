@@ -1,0 +1,95 @@
+#include <iostream>
+#include <unordered_map>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include<set>
+using namespace std;
+string toLowerCase(const string& str) {
+    string result = str;
+    transform(result.begin(), result.end(), result.begin(), ::tolower);
+    return result;
+}
+//tolower() funcn to transform all string in to lower
+vector<string> split(const string& text) {
+    vector<string> words;
+    string word;
+    for(int i=0;i<text.size();i++)
+    {
+        if(text[i]==' ')
+        {
+            words.push_back(word);
+            word="";
+            continue;
+        }
+        word+=text[i];
+    }
+    if(word.size()>0)
+    {
+        words.push_back(word);
+    }
+    return words;
+}
+    unordered_map<string, set<int>> index;
+    void buildIndex(const vector<pair<int, string>>& docs) {
+        for (const auto& doc : docs) {
+            int docId = doc.first;
+            vector<string> words = split(doc.second);
+            for (const auto& word : words) {
+                index[word].insert(docId);
+            }
+            
+        }
+    }
+    vector<int> search(const string& phrase) {
+        vector<string> words = split(phrase);
+        if (words.empty()) return {};
+
+        unordered_map<int, int> docCount; // Document and how many matching words were found in it
+        for (const auto& word : words) {
+            if (index.find(word) != index.end()) {
+                for (int docId : index[word]) {
+                    docCount[docId]++;
+                }
+            
+            }
+        }
+        vector<int> result;
+        for (const auto& entry : docCount) {
+            if (entry.second == words.size()) {
+                result.push_back(entry.first);
+            }
+        }
+
+        return result;
+    }
+
+
+int main() {
+    vector<pair<int, string>> documents = {
+        {1, "cloud computing is the on-demand availability of computer system resources."},
+        {2, "one integrated service for metrics uptime cloud monitoring dashboards and alerts reduces time spent navigating between systems."},
+        {3, "monitor entire cloud infrastructure, whether in the cloud computing is or in virtualized data centers."}
+    };
+    buildIndex(documents);
+    vector<int> result1 = search("cloud");
+    vector<int> result2 = search("cloud monitoring");
+    vector<int> result3 = search("cloud computing is");
+    cout << "Search results for 'cloud': ";
+    for (int docId : result1) {
+        cout << docId << " ";
+    }
+    cout << endl;
+    cout << "Search results for 'cloud monitoring': ";
+    for (int docId : result2) {
+        cout << docId << " ";
+    }
+    cout << endl;
+    cout << "Search results for 'Cloud computing is': ";
+    for (int docId : result3) {
+        cout << docId << " ";
+    }
+    cout << endl;
+    return 0;
+}
