@@ -1,0 +1,62 @@
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <string>
+using namespace std;
+struct FunctionInfo {
+    vector<string> params;
+    bool isVariadic;
+};
+bool matches(const vector<string>& functionParams, const vector<string>& queryParams,
+bool isVariadic) {
+    size_t fixedParamsSize = functionParams.size();
+    
+    // For non-variadic functions, parameters count must match exactly
+    if (!isVariadic) {
+        return functionParams == queryParams;
+    }
+
+    if (queryParams.size() < fixedParamsSize) {
+        return false;
+    }
+
+    for (size_t i = 0; i < fixedParamsSize; ++i) {
+        if (functionParams[i] != queryParams[i]) {
+            return false;
+        }
+    }
+    if (isVariadic && !functionParams.empty()) {
+        string variadicType = functionParams.back();  // The type of variadic parameter
+        for (size_t i = fixedParamsSize; i < queryParams.size(); ++i) {
+            if (queryParams[i] != variadicType) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+int main() {
+    unordered_map<string, FunctionInfo> functions = {
+        {"funA", {{"int", "bool"}, true}},     // Variadic
+        {"funB", {{"int", "int", "int"}, true}},  // Variadic
+        {"funC", {{"int", "int"}, false}}      // Non-variadic
+    };
+    vector<string> query1 = {"int", "int"};   // This should match funC
+    vector<string> query2 = {"int", "int", "int", "int"};  // This should match funB
+    cout << "Query 1: ";
+    for (const auto& function : functions) {
+        if (matches(function.second.params, query1, function.second.isVariadic)) {
+            cout << function.first << " ";
+        }
+    }
+    cout << endl;
+    for (const auto& function : functions) {
+        if (matches(function.second.params, query2, function.second.isVariadic)) {
+            cout << function.first << " ";
+        }
+    }
+    cout << endl;
+    return 0;
+}
