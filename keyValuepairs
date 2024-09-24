@@ -17,6 +17,9 @@ private:
     long long getCurrentTime() {
         return chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
     }
+   // long long getCurrentTime() {
+   // return time(nullptr); // Returns the current time in seconds
+   //}
 
     // Removes all expired entries based on the current time
     void removeExpired(long long currentTime) {
